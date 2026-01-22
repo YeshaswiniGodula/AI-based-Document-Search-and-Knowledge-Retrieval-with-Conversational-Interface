@@ -3,7 +3,7 @@ import os
 import shutil 
 import time
 from dotenv import load_dotenv 
-from langchain_community.document_loaders import DirectoryLoader, UnstructuredPDFLoader, TextLoader 
+from langchain_community.document_loaders import TextLoader 
 from langchain_classic.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import ChatGoogleGenerativeAI 
 from langchain_huggingface import HuggingFaceEmbeddings 
@@ -15,17 +15,27 @@ from langchain_community.vectorstores.utils import filter_complex_metadata
 from langchain_community.document_loaders import PyPDFLoader
 
 
+
 load_dotenv()
+
 DATA_DIR = "data"
 
 # -----------------------------
-# Load documents
+# Load documents (FIXED)
 # -----------------------------
 def load_documents():
-    pdf_loader = DirectoryLoader(DATA_DIR, glob="**/*.pdf", loader_cls=PyPDFLoader)
-    text_loader = DirectoryLoader(DATA_DIR, glob="**/*.txt", loader_cls=TextLoader)
+    documents = []
 
-    documents = pdf_loader.load() + text_loader.load()
+    for file in os.listdir(DATA_DIR):
+        path = os.path.join(DATA_DIR, file)
+
+        if file.endswith(".pdf"):
+            loader = PyPDFLoader(path)
+            documents.extend(loader.load())
+
+        elif file.endswith(".txt"):
+            loader = TextLoader(path)
+            documents.extend(loader.load())
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=600,
@@ -33,7 +43,6 @@ def load_documents():
     )
 
     return splitter.split_documents(documents)
-
 
 # -----------------------------
 # Create vector DB
@@ -46,9 +55,8 @@ def create_vectorstore(docs):
     vectordb = Chroma.from_documents(docs, embedding=embeddings)
     return vectordb
 
-
 # -----------------------------
-# Ask Question (FIXED)
+# Ask Question
 # -----------------------------
 def ask_question(vectordb, question):
     llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
@@ -79,6 +87,3 @@ def ask_question(vectordb, question):
 
     response = retrieval_chain.invoke({"input": question})
     return response["answer"]
-
-
-
