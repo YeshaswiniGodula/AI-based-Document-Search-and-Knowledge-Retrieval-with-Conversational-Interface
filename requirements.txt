@@ -2,7 +2,7 @@
 langchain
 langchain-core
 langchain_community
-
+pypdf 
 # OpenAI Integration
 langchain-openai
 openai
