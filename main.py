@@ -13,6 +13,8 @@ from langchain_classic.chains.combine_documents import create_stuff_documents_ch
 from langchain_classic.chains.retrieval import create_retrieval_chain 
 from langchain_community.vectorstores.utils import filter_complex_metadata
 from langchain_community.document_loaders import PyPDFLoader
+from pypdf import PdfReader
+
 
 
 
