@@ -30,8 +30,11 @@ scikit-learn
 torch
 torchvision
 torchaudio
+
+#streamlit
 streamlit
-langchain-text-splitters
+pypdf
+langchain
 chromadb
 python-dotenv
-pypdf
+
