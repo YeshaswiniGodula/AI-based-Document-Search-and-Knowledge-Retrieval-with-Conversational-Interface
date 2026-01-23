@@ -1,6 +1,8 @@
 import os
 import streamlit as st
 from main import load_documents, create_vectorstore, ask_question
+from pypdf import PdfReader
+
 
 st.set_page_config(page_title="AI Document Copilot", layout="wide")
 st.title("🤖 AI Document Copilot")
