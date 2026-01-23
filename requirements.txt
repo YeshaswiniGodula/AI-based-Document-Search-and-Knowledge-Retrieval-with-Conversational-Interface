@@ -1,40 +1,32 @@
-# LangChain Core
+
+
+streamlit
+
+# LangChain
 langchain
 langchain-core
-langchain_community
+langchain-community
+langchain-text-splitters
 
-# OpenAI Integration
+# Vector DB
+chromadb
+
+# LLM integrations
 langchain-openai
 openai
-
-# Anthropic Integration
 langchain-anthropic
-
-# Google Gemini (PaLM) Integration
 langchain-google-genai
 google-generativeai
 
-# Hugging Face Integration
-langchain-huggingface
+# HuggingFace
 transformers
 huggingface-hub
 sentence-transformers
-# Environment Variable Management
-python-dotenv
 
-# Machine Learning Utilities
+# Utils
+python-dotenv
 numpy
 scikit-learn
 
-#Pytorch  --If asked to install when run the open source model from huggingface. 
-torch
-torchvision
-torchaudio
-
-#streamlit
-streamlit
+# PDF
 pypdf==3.17.4
-langchain
-chromadb
-python-dotenv
-
