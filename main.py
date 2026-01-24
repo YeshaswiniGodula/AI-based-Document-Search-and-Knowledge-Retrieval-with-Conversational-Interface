@@ -1,29 +1,23 @@
-import streamlit as st 
-import os 
-import shutil 
-import time
-from dotenv import load_dotenv 
-from langchain_community.document_loaders import TextLoader 
-from langchain_classic.text_splitter import RecursiveCharacterTextSplitter
-from langchain_google_genai import ChatGoogleGenerativeAI 
-from langchain_huggingface import HuggingFaceEmbeddings 
+import os
+from dotenv import load_dotenv
+
+from langchain_community.document_loaders import PyPDFLoader, TextLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_huggingface import HuggingFaceEmbeddings
+
 from langchain_community.vectorstores import Chroma
-from langchain_classic.prompts import ChatPromptTemplate 
-from langchain_classic.chains.combine_documents import create_stuff_documents_chain
-from langchain_classic.chains.retrieval import create_retrieval_chain 
-from langchain_community.vectorstores.utils import filter_complex_metadata
-from langchain_community.document_loaders import PyPDFLoader
-from pypdf import PdfReader
-
-
-
+from langchain.prompts import ChatPromptTemplate
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains.retrieval import create_retrieval_chain
 
 load_dotenv()
 
 DATA_DIR = "data"
 
 # -----------------------------
-# Load documents (FIXED)
+# Load documents
 # -----------------------------
 def load_documents():
     documents = []
@@ -46,6 +40,7 @@ def load_documents():
 
     return splitter.split_documents(documents)
 
+
 # -----------------------------
 # Create vector DB
 # -----------------------------
@@ -54,27 +49,33 @@ def create_vectorstore(docs):
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
-    vectordb = Chroma.from_documents(docs, embedding=embeddings)
+    vectordb = Chroma.from_documents(
+        documents=docs,
+        embedding=embeddings
+    )
+
     return vectordb
+
 
 # -----------------------------
 # Ask Question
 # -----------------------------
 def ask_question(vectordb, question):
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        temperature=0.2
+    )
 
     retriever = vectordb.as_retriever(
         search_type="similarity",
-        search_kwargs={"k": 8}
+        search_kwargs={"k": 6}
     )
 
     prompt = ChatPromptTemplate.from_template(
         """
         You are an AI document assistant.
-
-        Answer the question using the given context.
-        If the answer exists indirectly, explain it clearly.
-        Do NOT say the information is missing unless it is truly absent.
+        Answer using ONLY the given context.
+        Explain clearly and simply.
 
         Context:
         {context}
@@ -88,4 +89,5 @@ def ask_question(vectordb, question):
     retrieval_chain = create_retrieval_chain(retriever, document_chain)
 
     response = retrieval_chain.invoke({"input": question})
+
     return response["answer"]
