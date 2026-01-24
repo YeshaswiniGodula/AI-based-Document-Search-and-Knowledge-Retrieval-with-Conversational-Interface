@@ -3,6 +3,7 @@ streamlit
 # LangChain
 langchain
 langchain-community
+langchain-text-splitters
 
 # Vector DB
 chromadb
