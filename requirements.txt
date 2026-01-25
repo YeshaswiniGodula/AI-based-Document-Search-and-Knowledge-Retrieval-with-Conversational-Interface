@@ -1,26 +1,12 @@
 streamlit
-
-# LangChain
+python-dotenv
+PyPDF2
 langchain
 langchain-community
-langchain-text-splitters
-
-# Vector DB
+langchain-huggingface
 chromadb
-
-# Google Gemini
-langchain-google-genai
-google-generativeai
-
-# HuggingFace embeddings
 sentence-transformers
 transformers
 huggingface-hub
-
-# Utils
-python-dotenv
-numpy
-scikit-learn
-
-# PDF support
-pypdf==3.17.4
+unstructured
+streamlit-chat
