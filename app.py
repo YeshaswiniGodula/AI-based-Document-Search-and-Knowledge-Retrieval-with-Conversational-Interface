@@ -1,49 +1,36 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
-from backend import extract_pdf_pypdf, extract_pdf_unstructured, extract_txt, split_text, get_vectorstore, get_chain
+
+from backend import (
+    extract_pdf_pypdf,
+    extract_pdf_unstructured,
+    extract_txt,
+    split_text,
+    get_vectorstore,
+    get_chain,
+    has_relevant_context
+)
+
+# -----------------------------
 # ENV
+# -----------------------------
 
 load_dotenv()
-HF_TOKEN = os.getenv("HF_TOKEN") or st.secrets.get("HF_TOKEN")  # to Host on streamlit cloud which secrets Token
+HF_TOKEN = os.getenv("HF_TOKEN") or st.secrets.get("HF_TOKEN")
 
-
+# -----------------------------
 # STREAMLIT CONFIG
+# -----------------------------
 
 st.set_page_config(
     page_title="AI-Based Document Retrieval Bot",
     layout="wide"
 )
 
-# Styling 
-
 st.markdown("""
 <style>
 h1 { font-size: 1.7rem !important; font-weight: 600; }
-.stButton > button {
-    background-color: #2563eb;
-    color: white;
-    border-radius: 6px;
-    padding: 0.35rem 0.8rem;
-    font-size: 0.85rem;
-    transition: all 0.25s ease-in-out;
-}
-.stButton > button:hover {
-    background-color: #1e40af;
-    color : black;
-    transform: translateY(-2px) scale(1.04);
-    box-shadow: 0 6px 16px rgba(37,99,235,0.45);
-}
-.stChatMessage {
-    border-radius: 10px;
-    padding: 10px;
-    margin-bottom: 10px;
-    transition: all 0.25s ease-in-out;
-}
-.stChatMessage:hover {
-     transform: translateY(2px) scale(1.01);
-}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -55,13 +42,26 @@ def main():
         st.error("HF_TOKEN not found")
         st.stop()
 
+    # -----------------------------
+    # SESSION STATE
+    # -----------------------------
+
     if "vectorstore" not in st.session_state:
         st.session_state.vectorstore = None
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Sidebar 
+    if "awaiting_permission" not in st.session_state:
+        st.session_state.awaiting_permission = False
+
+    if "pending_question" not in st.session_state:
+        st.session_state.pending_question = None
+
+    # -----------------------------
+    # SIDEBAR: UPLOAD
+    # -----------------------------
+
     with st.sidebar:
         st.header("📤 Upload Documents")
 
@@ -85,7 +85,6 @@ def main():
                             text = extract_pdf_pypdf(file)
 
                             if len(text.strip()) < 50:
-                                st.info(f"OCR used for: {file.name}")
                                 file.seek(0)
                                 text = extract_pdf_unstructured(file)
 
@@ -93,54 +92,96 @@ def main():
                             text = extract_txt(file)
 
                         if len(text.strip()) < 50:
-                            st.warning(f"Skipped (no text): {file.name}")
                             continue
 
-                        chunks = split_text(text)
-                        all_chunks.extend(chunks)
+                        all_chunks.extend(split_text(text))
 
                     if not all_chunks:
                         st.error("No readable text found")
                         st.stop()
 
                     st.session_state.vectorstore = get_vectorstore(all_chunks)
-                    st.success(f"✅ {len(uploaded_files)} documents uploaded Successfully ")
+                    st.success("✅ Documents processed successfully")
 
-
-    # Chat History 
+    # -----------------------------
+    # CHAT HISTORY
+    # -----------------------------
 
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
+    # -----------------------------
+    # PERMISSION HANDLING
+    # -----------------------------
 
-    # Chat Input 
-    if question := st.chat_input("Ask a question across all documents"):
+    if st.session_state.awaiting_permission:
+        reply = st.chat_input("Type yes to allow general answer, or no to cancel")
+
+        if reply:
+            with st.chat_message("assistant"):
+                if reply.lower() in ["yes", "y", "ok", "sure"]:
+                    llm, _ = get_chain(st.session_state.vectorstore, HF_TOKEN)
+                    response = llm.invoke(
+                        f"Answer using general knowledge:\n{st.session_state.pending_question}"
+                    )
+                    st.markdown(response.content)
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": response.content}
+                    )
+                else:
+                    msg = "Okay 👍 I will answer only from the uploaded documents."
+                    st.markdown(msg)
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": msg}
+                    )
+
+            st.session_state.awaiting_permission = False
+            st.session_state.pending_question = None
+
+        return
+
+    # -----------------------------
+    # CHAT INPUT
+    # -----------------------------
+
+    if question := st.chat_input("Ask a question from the documents"):
         st.session_state.messages.append(
             {"role": "user", "content": question}
         )
+
         with st.chat_message("assistant"):
             if not st.session_state.vectorstore:
                 st.warning("Upload and process documents first")
-            else:
-                with st.spinner("Thinking..."):
-                    chain = get_chain(st.session_state.vectorstore, HF_TOKEN)
-                    response = chain.invoke(question)
+                return
 
+            with st.spinner("Thinking..."):
+                llm, retriever = get_chain(st.session_state.vectorstore, HF_TOKEN)
+                docs = retriever.get_relevant_documents(question)
 
-                    answer = (
-                        response.content
-                        if hasattr(response, "content")
-                        else str(response)
+                if not docs or not has_relevant_context(docs):
+                    warning = (
+                        "⚠️ This topic is not present in the uploaded documents.\n\n"
+                        "Do you want a general answer instead? (yes / no)"
                     )
-
-                    st.markdown(answer)
+                    st.markdown(warning)
                     st.session_state.messages.append(
-                        {"role": "assistant", "content": answer}
+                        {"role": "assistant", "content": warning}
                     )
-        
+                    st.session_state.awaiting_permission = True
+                    st.session_state.pending_question = question
+                    return
+
+                context = "\n\n".join(doc.page_content for doc in docs)
+                response = llm.invoke(
+                    f"Answer ONLY using this context:\n{context}\n\nQuestion:\n{question}"
+                )
+
+                st.markdown(response.content)
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": response.content}
+                )
+
+
 if __name__ == "__main__":
     main()
-
-
-
