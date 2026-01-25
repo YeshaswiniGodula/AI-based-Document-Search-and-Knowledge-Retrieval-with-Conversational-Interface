@@ -13,8 +13,7 @@ from langchain_classic.chains.retrieval import create_retrieval_chain
 from langchain_community.vectorstores.utils import filter_complex_metadata
 # ENV
 
-load_dotenv()
-HF_TOKEN = os.getenv("HF_TOKEN")
+
 
 # PDF / TXT EXTRACTION
 
