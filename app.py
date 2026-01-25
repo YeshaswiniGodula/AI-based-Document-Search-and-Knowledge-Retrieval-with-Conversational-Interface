@@ -124,8 +124,9 @@ def main():
                 st.warning("Upload and process documents first")
             else:
                 with st.spinner("Thinking..."):
-                    chain = get_chain(st.session_state.vectorstore)
+                    chain = get_chain(st.session_state.vectorstore, HF_TOKEN)
                     response = chain.invoke(question)
+
 
                     answer = (
                         response.content
