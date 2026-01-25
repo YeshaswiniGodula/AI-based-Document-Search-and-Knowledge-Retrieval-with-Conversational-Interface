@@ -76,40 +76,21 @@ def format_docs(docs):
 
 # LLM initialization and CHAIN
 
-def get_chain(vectorstore):
+def get_chain(vectorstore, hf_token):
     endpoint = HuggingFaceEndpoint(
         repo_id="meta-llama/Llama-3.2-1B-Instruct",
-        huggingfacehub_api_token=HF_TOKEN,
+        huggingfacehub_api_token=hf_token,
         temperature=0.3,
         max_new_tokens=400
     )
-
 
     llm = ChatHuggingFace(llm=endpoint)
     retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
 
     prompt = ChatPromptTemplate.from_messages([
-        (
-            "system",
-            "You are a helpful assistant. Answer ONLY using the provided context. "
-            "If the answer is not in the context, say 'I don't know,as it is not listed in the pdf'."
-        ),
-        (
-            "human",
-            "Context:\n{context}\n\nQuestion:\n{question}"
-        )
+        ("system", "You are a helpful assistant. Answer ONLY using the provided context."),
+        ("human", "Context:\n{context}\n\nQuestion:\n{question}")
     ])
-
-    document_chain = create_stuff_documents_chain(
-        llm=llm,
-        prompt=prompt
-    )
-
-    # ✅ 2. Retrieval chain (FULL RAG)
-    retrieval_chain = create_retrieval_chain(
-        retriever=retriever,
-        combine_docs_chain=document_chain
-    )
 
     chain = (
         {
@@ -121,3 +102,4 @@ def get_chain(vectorstore):
     )
 
     return chain
+
