@@ -72,6 +72,9 @@ def get_vectorstore(chunks):
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
+def has_relevant_context(docs, min_chars=200):
+    total_text = "".join(doc.page_content for doc in docs)
+    return len(total_text.strip()) >= min_chars
 
 
 # LLM initialization and CHAIN
@@ -87,10 +90,28 @@ def get_chain(vectorstore, hf_token):
     llm = ChatHuggingFace(llm=endpoint)
     retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a helpful assistant. Answer ONLY using the provided context."),
-        ("human", "Context:\n{context}\n\nQuestion:\n{question}")
-    ])
+    return llm, retriever
+
+prompt = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        """
+You are a document-based assistant.
+
+Rules:
+1. Answer ONLY using the provided context.
+2. If the answer is NOT found in the context:
+   - Say clearly: "This topic is not present in the uploaded documents."
+   - Ask the user: "Do you want a general answer instead?"
+3. Do NOT use your own knowledge unless the user explicitly agrees.
+"""
+    ),
+    (
+        "human",
+        "Context:\n{context}\n\nQuestion:\n{question}"
+    )
+])
+
 
     chain = (
         {
