@@ -2,15 +2,8 @@ import os
 import streamlit as st
 from dotenv import load_dotenv
 
-from backend import (
-    extract_pdf_pypdf,
-    extract_pdf_unstructured,
-    extract_txt,
-    split_text,
-    get_vectorstore,
-    get_chain,
-    has_relevant_context
-)
+from backend import extract_pdf_pypdf,extract_pdf_unstructured,extract_txt,split_text,get_vectorstore,get_chain,has_relevant_context
+
 
 # -----------------------------
 # ENV
