@@ -93,7 +93,7 @@ def get_chain(vectorstore):
         (
             "system",
             "You are a helpful assistant. Answer ONLY using the provided context. "
-            "If the answer is not in the context, say 'I don't know'."
+            "If the answer is not in the context, say 'The topic is not listed in the document'."
         ),
         (
             "human",
