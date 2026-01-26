@@ -1,9 +1,17 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
-from backend import extract_pdf_pypdf, extract_pdf_unstructured, extract_txt, split_text, get_vectorstore, get_chain
-# ENV
+from backend import (
+    extract_pdf_pypdf,
+    extract_pdf_unstructured,
+    extract_txt,
+    split_text,
+    get_vectorstore,
+    get_chain,
+    get_summary_llm
+)
 
+# ENV
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN") or st.secrets.get("HF_TOKEN")
 
@@ -24,14 +32,10 @@ st.markdown("""
 h1 {
     font-size: 2rem !important;
     font-weight: 700;
-    color: #0f172a;
 }
 [data-testid="stSidebar"] {
     background: #ffffff;
     border-right: 1px solid #e5e7eb;
-}
-[data-testid="stSidebar"] h2 {
-    color: #2563eb;
 }
 section[data-testid="stFileUploader"] {
     background: #f1f5f9;
@@ -39,28 +43,15 @@ section[data-testid="stFileUploader"] {
     border-radius: 10px;
     padding: 12px;
 }
-.stButton > button {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    color: white;
-    border-radius: 8px;
-    padding: 0.45rem 1.1rem;
-    border: none;
-}
 .stChatMessage {
     background: #ffffff;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     padding: 12px;
-    margin-bottom: 10px;
 }
 .stChatMessage[data-testid="chat-message-user"] {
     background: #eff6ff;
     border-left: 4px solid #2563eb;
-}
-[data-testid="stChatInput"] textarea {
-    background: #ffffff;
-    border: 1px solid #cbd5f5;
-    border-radius: 10px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -73,7 +64,6 @@ def main():
         st.error("HF_TOKEN not found")
         st.stop()
 
-    # -------- Session States --------
     if "vectorstore" not in st.session_state:
         st.session_state.vectorstore = None
 
@@ -100,14 +90,14 @@ def main():
                 all_chunks = []
                 st.session_state.summaries.clear()
 
+                summary_llm = get_summary_llm()
+
                 with st.spinner("Processing documents..."):
                     for file in uploaded_files:
                         text = ""
 
-                        # ---- Extract text ----
                         if file.name.endswith(".pdf"):
                             text = extract_pdf_pypdf(file)
-
                             if len(text.strip()) < 50:
                                 file.seek(0)
                                 text = extract_pdf_unstructured(file)
@@ -116,14 +106,12 @@ def main():
                             text = extract_txt(file)
 
                         if len(text.strip()) < 50:
-                            st.warning(f"Skipped (no text): {file.name}")
                             continue
 
-                        # ---- Split for vectorstore ----
                         chunks = split_text(text)
                         all_chunks.extend(chunks)
 
-                        # ---- SUMMARY PER DOCUMENT ----
+                        # -------- SUMMARY PER DOCUMENT --------
                         summary_prompt = f"""
                         Summarize the following document in 5 clear bullet points.
                         Keep it short and professional.
@@ -132,8 +120,7 @@ def main():
                         {text[:3000]}
                         """
 
-                        summary_chain = get_chain(None)
-                        summary_response = summary_chain.invoke(summary_prompt)
+                        summary_response = summary_llm.invoke(summary_prompt)
 
                         summary_text = (
                             summary_response.content
@@ -142,10 +129,6 @@ def main():
                         )
 
                         st.session_state.summaries[file.name] = summary_text
-
-                    if not all_chunks:
-                        st.error("No readable text found")
-                        st.stop()
 
                     st.session_state.vectorstore = get_vectorstore(all_chunks)
                     st.success("✅ Documents processed successfully")
@@ -187,6 +170,5 @@ def main():
                         {"role": "assistant", "content": answer}
                     )
 
-# ---------------- RUN ----------------
 if __name__ == "__main__":
     main()
