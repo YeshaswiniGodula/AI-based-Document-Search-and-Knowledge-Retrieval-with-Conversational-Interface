@@ -16,91 +16,91 @@ st.set_page_config(
 )
 
 # Styling 
-
 st.markdown("""
 <style>
 
 /* App background */
 .stApp {
-    background: linear-gradient(135deg, #0f172a, #020617);
-    color: #e5e7eb;
-    font-family: 'Segoe UI', sans-serif;
+    background: #f8fafc;
+    color: #0f172a;
+    font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
 /* Main title */
 h1 {
     font-size: 2rem !important;
     font-weight: 700;
-    color: #f8fafc;
+    color: #0f172a;
 }
 
 /* Sidebar */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #020617, #020617);
-    border-right: 1px solid #1e293b;
+    background: #ffffff;
+    border-right: 1px solid #e5e7eb;
 }
 
 /* Sidebar headers */
 [data-testid="stSidebar"] h2,
 [data-testid="stSidebar"] h3 {
-    color: #93c5fd;
+    color: #2563eb;
+    font-weight: 600;
 }
 
 /* File uploader */
 section[data-testid="stFileUploader"] {
-    background: #020617;
-    border: 1px dashed #334155;
+    background: #f1f5f9;
+    border: 1px dashed #cbd5f5;
     border-radius: 10px;
-    padding: 10px;
+    padding: 12px;
 }
 
 /* Buttons */
 .stButton > button {
-    background: linear-gradient(135deg, #2563eb, #1e40af);
-    color: white;
-    border-radius: 10px;
-    padding: 0.45rem 1.2rem;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff;
+    border-radius: 8px;
+    padding: 0.45rem 1.1rem;
     font-size: 0.9rem;
     border: none;
-    transition: all 0.25s ease-in-out;
+    font-weight: 500;
+    transition: all 0.25s ease;
 }
 
 .stButton > button:hover {
-    background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(59,130,246,0.4);
+    background: linear-gradient(135deg, #1e40af, #1e3a8a);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(37,99,235,0.3);
 }
 
 /* Chat messages */
 .stChatMessage {
-    background: #020617;
-    border: 1px solid #1e293b;
-    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
     padding: 12px;
     margin-bottom: 12px;
 }
 
 /* User message */
 .stChatMessage[data-testid="chat-message-user"] {
-    background: linear-gradient(135deg, #1e3a8a, #1e40af);
-    color: #f8fafc;
+    background: #eff6ff;
+    border-left: 4px solid #2563eb;
 }
 
 /* Assistant message */
 .stChatMessage[data-testid="chat-message-assistant"] {
-    background: #020617;
-    color: #e5e7eb;
+    background: #ffffff;
 }
 
 /* Chat input */
 [data-testid="stChatInput"] textarea {
-    background: #020617;
-    border: 1px solid #334155;
-    color: #f8fafc;
-    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #cbd5f5;
+    color: #0f172a;
+    border-radius: 10px;
 }
 
-/* Success / info messages */
+/* Alerts */
 .stAlert {
     border-radius: 10px;
 }
@@ -110,12 +110,13 @@ section[data-testid="stFileUploader"] {
     width: 6px;
 }
 ::-webkit-scrollbar-thumb {
-    background: #334155;
+    background: #cbd5f5;
     border-radius: 10px;
 }
 
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
