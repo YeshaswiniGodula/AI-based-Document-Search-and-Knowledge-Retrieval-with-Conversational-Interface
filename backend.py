@@ -13,7 +13,8 @@ from langchain_classic.chains.retrieval import create_retrieval_chain
 from langchain_community.vectorstores.utils import filter_complex_metadata
 # ENV
 
-
+load_dotenv()
+HF_TOKEN = os.getenv("HF_TOKEN")
 
 # PDF / TXT EXTRACTION
 
@@ -72,46 +73,44 @@ def get_vectorstore(chunks):
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
-def has_relevant_context(docs, min_chars=200):
-    total_text = "".join(doc.page_content for doc in docs)
-    return len(total_text.strip()) >= min_chars
 
 
 # LLM initialization and CHAIN
 
-def get_chain(vectorstore, hf_token):
+def get_chain(vectorstore):
     endpoint = HuggingFaceEndpoint(
         repo_id="meta-llama/Llama-3.2-1B-Instruct",
-        huggingfacehub_api_token=hf_token,
+        huggingfacehub_api_token=HF_TOKEN,
         temperature=0.3,
         max_new_tokens=400
     )
 
+
     llm = ChatHuggingFace(llm=endpoint)
     retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
 
-    return llm, retriever
+    prompt = ChatPromptTemplate.from_messages([
+        (
+            "system",
+            "You are a helpful assistant. Answer ONLY using the provided context. "
+            "If the answer is not in the context, say 'I don't know'."
+        ),
+        (
+            "human",
+            "Context:\n{context}\n\nQuestion:\n{question}"
+        )
+    ])
 
-prompt = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        """
-You are a document-based assistant.
-
-Rules:
-1. Answer ONLY using the provided context.
-2. If the answer is NOT found in the context:
-   - Say clearly: "This topic is not present in the uploaded documents."
-   - Ask the user: "Do you want a general answer instead?"
-3. Do NOT use your own knowledge unless the user explicitly agrees.
-"""
-    ),
-    (
-        "human",
-        "Context:\n{context}\n\nQuestion:\n{question}"
+    document_chain = create_stuff_documents_chain(
+        llm=llm,
+        prompt=prompt
     )
-])
 
+    # ✅ 2. Retrieval chain (FULL RAG)
+    retrieval_chain = create_retrieval_chain(
+        retriever=retriever,
+        combine_docs_chain=document_chain
+    )
 
     chain = (
         {
