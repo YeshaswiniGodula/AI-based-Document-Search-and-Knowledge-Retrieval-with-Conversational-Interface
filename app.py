@@ -19,33 +19,104 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-h1 { font-size: 1.7rem !important; font-weight: 600; }
-.stButton > button {
-    background-color: #2563eb;
-    color: white;
-    border-radius: 6px;
-    padding: 0.35rem 0.8rem;
-    font-size: 0.85rem;
-    transition: all 0.25s ease-in-out;
+
+/* App background */
+.stApp {
+    background: linear-gradient(135deg, #0f172a, #020617);
+    color: #e5e7eb;
+    font-family: 'Segoe UI', sans-serif;
 }
-.stButton > button:hover {
-    background-color: #1e40af;
-    color : black;
-    transform: translateY(-2px) scale(1.04);
-    box-shadow: 0 6px 16px rgba(37,99,235,0.45);
+
+/* Main title */
+h1 {
+    font-size: 2rem !important;
+    font-weight: 700;
+    color: #f8fafc;
 }
-.stChatMessage {
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #020617, #020617);
+    border-right: 1px solid #1e293b;
+}
+
+/* Sidebar headers */
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: #93c5fd;
+}
+
+/* File uploader */
+section[data-testid="stFileUploader"] {
+    background: #020617;
+    border: 1px dashed #334155;
     border-radius: 10px;
     padding: 10px;
-    margin-bottom: 10px;
+}
+
+/* Buttons */
+.stButton > button {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    color: white;
+    border-radius: 10px;
+    padding: 0.45rem 1.2rem;
+    font-size: 0.9rem;
+    border: none;
     transition: all 0.25s ease-in-out;
 }
-.stChatMessage:hover {
-     transform: translateY(2px) scale(1.01);
+
+.stButton > button:hover {
+    background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59,130,246,0.4);
+}
+
+/* Chat messages */
+.stChatMessage {
+    background: #020617;
+    border: 1px solid #1e293b;
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+/* User message */
+.stChatMessage[data-testid="chat-message-user"] {
+    background: linear-gradient(135deg, #1e3a8a, #1e40af);
+    color: #f8fafc;
+}
+
+/* Assistant message */
+.stChatMessage[data-testid="chat-message-assistant"] {
+    background: #020617;
+    color: #e5e7eb;
+}
+
+/* Chat input */
+[data-testid="stChatInput"] textarea {
+    background: #020617;
+    border: 1px solid #334155;
+    color: #f8fafc;
+    border-radius: 12px;
+}
+
+/* Success / info messages */
+.stAlert {
+    border-radius: 10px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 10px;
 }
 
 </style>
 """, unsafe_allow_html=True)
+
 
 
 def main():
