@@ -13,7 +13,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_community.document_loaders import UnstructuredPDFLoader
-from langchain.memory import ConversationBufferMemory
+from langchain.memory.chat_memory import ConversationBufferMemory
+
 
 # ---------------- ENV ----------------
 load_dotenv()
