@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
+
 from backend import (
     extract_pdf_pypdf,
     extract_pdf_unstructured,
@@ -11,86 +12,99 @@ from backend import (
     get_summary_llm
 )
 
-# ENV
+# ---------------- ENV ----------------
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN") or st.secrets.get("HF_TOKEN")
 
 # ---------------- STREAMLIT CONFIG ----------------
 st.set_page_config(
-    page_title="AI-Based Document Retrieval Bot",
+    page_title="AI Document Retrieval Bot",
     layout="wide"
 )
 
 # ---------------- UI STYLE ----------------
 st.markdown("""
 <style>
-.stApp {
-    background: #f8fafc;
-    color: #0f172a;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-}
-h1 {
-    font-size: 2rem !important;
-    font-weight: 700;
-}
-[data-testid="stSidebar"] {
-    background: #ffffff;
-    border-right: 1px solid #e5e7eb;
-}
-section[data-testid="stFileUploader"] {
-    background: #f1f5f9;
-    border: 1px dashed #cbd5f5;
-    border-radius: 10px;
-    padding: 12px;
-}
-.stChatMessage {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 12px;
-}
-.stChatMessage[data-testid="chat-message-user"] {
-    background: #eff6ff;
-    border-left: 4px solid #2563eb;
-}
+.stApp { background: #f8fafc; }
+.stChatMessage { border-radius: 12px; padding: 12px; }
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------- MAIN APP ----------------
 def main():
-    st.title("📄 AI Document Retrieval Bot")
+    st.title("📄 AI-Based Document Retrieval Bot")
 
     if not HF_TOKEN:
         st.error("HF_TOKEN not found")
         st.stop()
 
+    # -------- SESSION STATE --------
     if "vectorstore" not in st.session_state:
         st.session_state.vectorstore = None
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    if "chat_history_backup" not in st.session_state:
+        st.session_state.chat_history_backup = []
+
     if "summaries" not in st.session_state:
         st.session_state.summaries = {}
+
+    if "show_chat" not in st.session_state:
+        st.session_state.show_chat = True
 
     # ---------------- SIDEBAR ----------------
     with st.sidebar:
         st.header("📤 Upload Documents")
 
         uploaded_files = st.file_uploader(
-            "Upload PDF / TXT files",
+            "Upload PDF / TXT",
             type=["pdf", "txt"],
             accept_multiple_files=True
         )
 
-        if st.button("Process Documents"):
+        st.subheader("⚙️ Advanced Options")
+
+        role = st.selectbox(
+            "Answer Style",
+            ["Student", "Beginner", "Expert", "Manager"]
+        )
+
+        summary_level = st.radio(
+            "Summary Level",
+            ["Short", "Medium", "Detailed"]
+        )
+
+        enable_comparison = st.checkbox("📊 Document Comparison")
+        show_sources = st.checkbox("📌 Show Sources", value=True)
+
+        # -------- CHAT CONTROL BUTTONS --------
+        st.subheader("💬 Chat Controls")
+
+        if st.button("🧹 Clear Chat"):
+            st.session_state.chat_history_backup = st.session_state.messages.copy()
+            st.session_state.messages = []
+            st.success("Chat cleared")
+
+        if st.button("👀 View Previous Chat"):
+            st.session_state.show_chat = not st.session_state.show_chat
+
+        # -------- PROCESS DOCUMENTS --------
+        if st.button("🚀 Process Documents"):
             if not uploaded_files:
-                st.error("Upload at least one document")
+                st.warning("Upload at least one document")
             else:
                 all_chunks = []
                 st.session_state.summaries.clear()
 
                 summary_llm = get_summary_llm()
+
+                level_map = {
+                    "Short": "2 bullet points",
+                    "Medium": "5 bullet points",
+                    "Detailed": "10 bullet points"
+                }
 
                 with st.spinner("Processing documents..."):
                     for file in uploaded_files:
@@ -111,42 +125,57 @@ def main():
                         chunks = split_text(text)
                         all_chunks.extend(chunks)
 
-                        # -------- SUMMARY PER DOCUMENT --------
                         summary_prompt = f"""
-                        Summarize the following document in 5 clear bullet points.
-                        Keep it short and professional.
+                        Summarize the document in {level_map[summary_level]}.
+                        Use simple English.
 
                         Document:
                         {text[:3000]}
                         """
 
-                        summary_response = summary_llm.invoke(summary_prompt)
-
-                        summary_text = (
-                            summary_response.content
-                            if hasattr(summary_response, "content")
-                            else str(summary_response)
-                        )
-
-                        st.session_state.summaries[file.name] = summary_text
+                        summary = summary_llm.invoke(summary_prompt)
+                        st.session_state.summaries[file.name] = summary.content
 
                     st.session_state.vectorstore = get_vectorstore(all_chunks)
-                    st.success("✅ Documents processed successfully")
+                    st.success("✅ Documents processed")
 
     # ---------------- DOCUMENT SUMMARIES ----------------
     if st.session_state.summaries:
         st.subheader("📄 Document Summaries")
-        for doc, summary in st.session_state.summaries.items():
-            with st.expander(f"📘 {doc}"):
+        for name, summary in st.session_state.summaries.items():
+            with st.expander(name):
                 st.markdown(summary)
 
-    # ---------------- CHAT HISTORY ----------------
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    # ---------------- DOCUMENT COMPARISON ----------------
+    if enable_comparison and len(st.session_state.summaries) >= 2:
+        st.subheader("📊 Document Comparison")
+
+        compare_text = ""
+        for k, v in st.session_state.summaries.items():
+            compare_text += f"\nDocument: {k}\n{v}\n"
+
+        compare_llm = get_summary_llm()
+        result = compare_llm.invoke(
+            f"Compare these documents:\n{compare_text}"
+        )
+
+        st.markdown(result.content)
+
+    # ---------------- PREVIOUS CHAT (OPTIONAL VIEW) ----------------
+    if not st.session_state.show_chat and st.session_state.chat_history_backup:
+        st.subheader("🕘 Previous Chat History")
+        for msg in st.session_state.chat_history_backup:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+
+    # ---------------- CURRENT CHAT ----------------
+    if st.session_state.show_chat:
+        for msg in st.session_state.messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
 
     # ---------------- CHAT INPUT ----------------
-    if question := st.chat_input("Ask a question across all documents"):
+    if question := st.chat_input("Ask a question from the documents"):
         st.session_state.messages.append(
             {"role": "user", "content": question}
         )
@@ -156,19 +185,35 @@ def main():
                 st.warning("Upload and process documents first")
             else:
                 with st.spinner("Thinking..."):
-                    chain = get_chain(st.session_state.vectorstore)
-                    response = chain.invoke(question)
-
-                    answer = (
-                        response.content
-                        if hasattr(response, "content")
-                        else str(response)
+                    chain, memory = get_chain(
+                        st.session_state.vectorstore,
+                        role=role
                     )
 
+                    response = chain.invoke(question)
+                    answer = response.content
+
+                    if show_sources:
+                        answer += "\n\n📌 *Answer generated from uploaded documents*"
+
                     st.markdown(answer)
+
+                    memory.save_context(
+                        {"question": question},
+                        {"answer": answer}
+                    )
+
                     st.session_state.messages.append(
                         {"role": "assistant", "content": answer}
                     )
 
+    # ---------------- FUTURE FEATURES ----------------
+    st.sidebar.subheader("🚀 Coming Soon")
+    st.sidebar.button("🎤 Voice Input")
+    st.sidebar.button("🌐 Multilingual Support")
+    st.sidebar.button("📈 Confidence Score")
+    st.sidebar.button("🔐 User Login")
+
 if __name__ == "__main__":
     main()
+
