@@ -8,6 +8,10 @@ python-dotenv==1.0.1
 # PDF / Text processing
 PyPDF2==3.0.1
 unstructured==0.8.6
+pillow==10.1.0
+beautifulsoup4==4.12.2
+lxml==4.9.3
+numpy==1.26.2
 
 # LangChain core
 langchain==0.1.242
@@ -26,4 +30,5 @@ chromadb==0.4.2
 torch==2.2.0
 torchvision==0.17.1
 torchaudio==2.2.2
+
 
