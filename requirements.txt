@@ -1,12 +1,29 @@
-streamlit
-python-dotenv
-PyPDF2
-langchain
-langchain-community
-langchain-huggingface
-chromadb
-sentence-transformers
-transformers
-huggingface-hub
-unstructured
-streamlit-chat
+# Web / UI
+streamlit==1.26.1
+streamlit-chat==0.0.2
+
+# Environment variables
+python-dotenv==1.0.1
+
+# PDF / Text processing
+PyPDF2==3.0.1
+unstructured==0.8.6
+
+# LangChain core
+langchain==0.1.242
+langchain-community==0.0.230
+
+# HuggingFace integrations
+langchain-huggingface==0.0.16
+transformers==4.35.2
+sentence-transformers==2.2.2
+huggingface-hub==0.17.4
+
+# Vector database
+chromadb==0.4.2
+
+# ML / Torch backend
+torch==2.2.0
+torchvision==0.17.1
+torchaudio==2.2.2
+
