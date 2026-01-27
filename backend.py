@@ -2,6 +2,7 @@ import os
 import tempfile
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
+
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import (
     HuggingFaceEmbeddings,
@@ -12,12 +13,13 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_community.document_loaders import UnstructuredPDFLoader
+from langchain.memory import ConversationBufferMemory
 
-# ENV
+# ---------------- ENV ----------------
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-# ---------------- PDF / TXT EXTRACTION ----------------
+# ---------------- FILE EXTRACTION ----------------
 def extract_pdf_pypdf(file):
     text = ""
     reader = PdfReader(file)
@@ -55,6 +57,7 @@ def get_vectorstore(chunks):
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
+
     return Chroma.from_texts(
         texts=chunks,
         embedding=embeddings,
@@ -66,7 +69,7 @@ def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
 
-# ---------------- SUMMARY LLM (NEW ✅) ----------------
+# ---------------- SUMMARY LLM ----------------
 def get_summary_llm():
     endpoint = HuggingFaceEndpoint(
         repo_id="meta-llama/Llama-3.2-1B-Instruct",
@@ -77,8 +80,11 @@ def get_summary_llm():
     return ChatHuggingFace(llm=endpoint)
 
 
-# ---------------- RAG CHAIN (Q&A ONLY) ----------------
-def get_chain(vectorstore):
+# ---------------- RAG CHAIN WITH MEMORY ----------------
+def get_chain(vectorstore, role="Student"):
+    """
+    Returns a RAG chain with conversation memory and role-based response style.
+    """
     endpoint = HuggingFaceEndpoint(
         repo_id="meta-llama/Llama-3.2-1B-Instruct",
         huggingfacehub_api_token=HF_TOKEN,
@@ -89,27 +95,48 @@ def get_chain(vectorstore):
     llm = ChatHuggingFace(llm=endpoint)
     retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
 
+    memory = ConversationBufferMemory(
+        memory_key="chat_history",
+        return_messages=True
+    )
+
     prompt = ChatPromptTemplate.from_messages([
         (
             "system",
-            "You are a helpful assistant. Answer ONLY using the provided context. "
-            "If the answer is not in the context, say 'The topic is not listed in the document'."
+            f"""
+            You are a helpful AI assistant.
+            Answer as a {role}.
+            Use ONLY the document context.
+            If the answer is not in the documents, say:
+            'The topic is not listed in the document.'
+            """
         ),
         (
             "human",
-            "Context:\n{context}\n\nQuestion:\n{question}"
+            """
+            Context:
+            {context}
+
+            Chat History:
+            {chat_history}
+
+            Question:
+            {question}
+            """
         )
     ])
 
     chain = (
         {
             "context": retriever | format_docs,
-            "question": RunnablePassthrough()
+            "question": RunnablePassthrough(),
+            "chat_history": lambda _: memory.load_memory_variables({})["chat_history"]
         }
         | prompt
         | llm
     )
 
-    return chain
+    return chain, memory
+
 
 
